@@ -285,6 +285,7 @@ export default class DayPickerRangeController extends React.PureComponent {
 			initialVisibleMonth,
 			numberOfMonths,
 			enableOutsideDays,
+			hideSelectionStartHighlight,
 		} = nextProps;
 
 		const {
@@ -300,6 +301,7 @@ export default class DayPickerRangeController extends React.PureComponent {
 			initialVisibleMonth: prevInitialVisibleMonth,
 			numberOfMonths: prevNumberOfMonths,
 			enableOutsideDays: prevEnableOutsideDays,
+			hideSelectionStartHighlight: prevHideSelectionStartHighlight,
 		} = this.props;
 
 		const { hoverDate } = this.state;
@@ -319,7 +321,7 @@ export default class DayPickerRangeController extends React.PureComponent {
 			recomputeDayBlocked = true;
 		}
 
-		if (isDayHighlighted !== prevIsDayHighlighted || updateCountCalendar !== prevUpdateCountCalendar) {
+		if (isDayHighlighted !== prevIsDayHighlighted || updateCountCalendar !== prevUpdateCountCalendar || hideSelectionStartHighlight !== prevHideSelectionStartHighlight) {
 			this.modifiers['highlighted-calendar'] = day => isDayHighlighted(day);
 			recomputeDayHighlighted = true;
 		}
@@ -503,7 +505,9 @@ export default class DayPickerRangeController extends React.PureComponent {
 							modifiers = this.deleteModifier(modifiers, momentObj, 'highlighted-calendar');
 							modifiers = this.deleteModifier(modifiers, momentObj, 'hovered-span');
 							modifiers = this.deleteModifier(modifiers, momentObj, 'selected-start-in-hovered-span');
-							modifiers = this.deleteModifier(modifiers, momentObj, 'selected-start');
+							if (hideSelectionStartHighlight) {
+								modifiers = this.deleteModifier(modifiers, momentObj, 'selected-start');
+							}
 						}
 					}
 				});
