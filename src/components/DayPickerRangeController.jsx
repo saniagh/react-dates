@@ -5,31 +5,26 @@ import { forbidExtraProps, mutuallyExclusiveProps, nonNegativeInteger } from 'ai
 import moment from 'moment';
 import values from 'object.values';
 import isTouchDevice from 'is-touch-device';
-
 import { DayPickerPhrases } from '../defaultPhrases';
 import getPhrasePropTypes from '../utils/getPhrasePropTypes';
-
 import isInclusivelyAfterDay from '../utils/isInclusivelyAfterDay';
 import isNextDay from '../utils/isNextDay';
 import isSameDay from '../utils/isSameDay';
 import isAfterDay from '../utils/isAfterDay';
 import isBeforeDay from '../utils/isBeforeDay';
 import isPreviousDay from '../utils/isPreviousDay';
-
 import getVisibleDays from '../utils/getVisibleDays';
 import isDayVisible from '../utils/isDayVisible';
-
 import getSelectedDateOffset from '../utils/getSelectedDateOffset';
-
 import toISODateString from '../utils/toISODateString';
 import { addModifier, deleteModifier } from '../utils/modifiers';
-
 import DisabledShape from '../shapes/DisabledShape';
 import FocusedInputShape from '../shapes/FocusedInputShape';
 import ScrollableOrientationShape from '../shapes/ScrollableOrientationShape';
 import DayOfWeekShape from '../shapes/DayOfWeekShape';
 import CalendarInfoPositionShape from '../shapes/CalendarInfoPositionShape';
 import NavPositionShape from '../shapes/NavPositionShape';
+import difference from 'lodash/difference';
 
 import {
 	DAY_SIZE,
@@ -52,6 +47,8 @@ const propTypes = forbidExtraProps({
 	endDateOffset: PropTypes.func,
 	minDate: momentPropTypes.momentObj,
 	maxDate: momentPropTypes.momentObj,
+	halfDayBookedDays: PropTypes.array,
+	halfDayUnavailableDays: PropTypes.array,
 
 	focusedInput: FocusedInputShape,
 	onFocusChange: PropTypes.func,
@@ -128,6 +125,8 @@ const defaultProps = {
 	onDatesChange() {},
 	startDateOffset: undefined,
 	endDateOffset: undefined,
+	halfDayBookedDays: [],
+	halfDayUnavailableDays: [],
 
 	focusedInput: null,
 	onFocusChange() {},
@@ -238,6 +237,8 @@ export default class DayPickerRangeController extends React.PureComponent {
 			'selected-start-in-hovered-span': (day, hoverDate) => this.isStartDate(day) && isAfterDay(hoverDate, day),
 			'selected-start-no-selected-end': (day) => this.isStartDate(day) && !props.endDate,
 			'selected-end-no-selected-start': (day) => this.isEndDate(day) && !props.startDate,
+			'booked-half-day': (day) => this.isDayHalfBooked(day),
+			'unavailable-half-day': (day) => this.isDayHalfUnavailable(day),
 		};
 
 		const { currentMonth, visibleDays } = this.getStateForNewMonth(props);
@@ -286,6 +287,8 @@ export default class DayPickerRangeController extends React.PureComponent {
 			numberOfMonths,
 			enableOutsideDays,
 			hideSelectionStartHighlight,
+			halfDayBookedDays,
+			halfDayUnavailableDays,
 		} = nextProps;
 
 		const {
@@ -302,6 +305,8 @@ export default class DayPickerRangeController extends React.PureComponent {
 			numberOfMonths: prevNumberOfMonths,
 			enableOutsideDays: prevEnableOutsideDays,
 			hideSelectionStartHighlight: prevHideSelectionStartHighlight,
+			halfDayBookedDays: prevHalfDayBookedDays,
+			halfDayUnavailableDays: prevHalfDayUnavailableDays,
 		} = this.props;
 
 		const { hoverDate } = this.state;
@@ -310,6 +315,22 @@ export default class DayPickerRangeController extends React.PureComponent {
 		let recomputeOutsideRange = false;
 		let recomputeDayBlocked = false;
 		let recomputeDayHighlighted = false;
+
+		let modifiers = {};
+
+		if (difference(halfDayBookedDays, prevHalfDayBookedDays).length) {
+			halfDayBookedDays.forEach(day => {
+				modifiers = this.addModifier(modifiers, moment(day, 'YYYY-MM-DD'), 'booked-half-day');
+			});
+			recomputeDayBlocked = true;
+		}
+
+		if (difference(halfDayUnavailableDays, prevHalfDayUnavailableDays).length) {
+			halfDayUnavailableDays.forEach(day => {
+				modifiers = this.addModifier(modifiers, moment(day, 'YYYY-MM-DD'), 'unavailable-half-day');
+			});
+			recomputeDayBlocked = true;
+		}
 
 		if (isOutsideRange !== prevIsOutsideRange) {
 			this.modifiers['blocked-out-of-range'] = (day) => isOutsideRange(day);
@@ -351,8 +372,6 @@ export default class DayPickerRangeController extends React.PureComponent {
 				visibleDays,
 			});
 		}
-
-		let modifiers = {};
 
 		if (didStartDateChange) {
 			modifiers = this.deleteModifier(modifiers, prevStartDate, 'selected-start');
@@ -1310,58 +1329,30 @@ export default class DayPickerRangeController extends React.PureComponent {
 			&& isSameDay(hoverDate, endDate);
 	}
 
+	isDayHalfBooked(day) {
+		const { halfDayBookedDays } = this.props;
+
+		return halfDayBookedDays.some(bookedDay => day.startOf('day').isSame(moment(bookedDay, 'DD.MM.YYYY').startOf('day')));
+	}
+
+	isDayHalfUnavailable(day) {
+		const { halfDayUnavailableDays } = this.props;
+
+		return halfDayUnavailableDays.some(bookedDay => day.startOf('day').isSame(moment(bookedDay, 'DD.MM.YYYY').startOf('day')));
+	}
+
 	render() {
+		const { currentMonth, phrases, visibleDays, disablePrev, disableNext, } = this.state;
 		const {
-			numberOfMonths,
-			orientation,
-			monthFormat,
-			renderMonthText,
-			renderWeekHeaderElement,
-			dayPickerNavigationInlineStyles,
-			navPosition,
-			navPrev,
-			navNext,
-			renderNavPrevButton,
-			renderNavNextButton,
-			noNavButtons,
-			noNavNextButton,
-			noNavPrevButton,
-			onOutsideClick,
-			withPortal,
-			enableOutsideDays,
-			firstDayOfWeek,
-			renderKeyboardShortcutsButton,
-			renderKeyboardShortcutsPanel,
-			hideKeyboardShortcutsPanel,
-			daySize,
-			focusedInput,
-			renderCalendarDay,
-			renderDayContents,
-			renderCalendarInfo,
-			renderMonthElement,
-			calendarInfoPosition,
-			onBlur,
-			onShiftTab,
-			onTab,
-			isFocused,
-			showKeyboardShortcuts,
-			isRTL,
-			weekDayFormat,
-			dayAriaLabelFormat,
-			verticalHeight,
-			noBorder,
-			transitionDuration,
-			verticalBorderSpacing,
+			numberOfMonths, orientation, monthFormat, renderMonthText, renderWeekHeaderElement,
+			dayPickerNavigationInlineStyles, navPosition, navPrev, navNext, renderNavPrevButton, renderNavNextButton,
+			noNavButtons, noNavNextButton, noNavPrevButton, onOutsideClick, withPortal, enableOutsideDays,
+			firstDayOfWeek, renderKeyboardShortcutsButton, renderKeyboardShortcutsPanel, hideKeyboardShortcutsPanel,
+			daySize, focusedInput, renderCalendarDay, renderDayContents, renderCalendarInfo, renderMonthElement,
+			calendarInfoPosition, onBlur, onShiftTab, onTab, isFocused, showKeyboardShortcuts, isRTL, weekDayFormat,
+			dayAriaLabelFormat, verticalHeight, noBorder, transitionDuration, verticalBorderSpacing,
 			horizontalMonthPadding,
 		} = this.props;
-
-		const {
-			currentMonth,
-			phrases,
-			visibleDays,
-			disablePrev,
-			disableNext,
-		} = this.state;
 
 		return (
 			<DayPicker
