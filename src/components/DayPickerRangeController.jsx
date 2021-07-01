@@ -435,10 +435,6 @@ export default class DayPickerRangeController extends React.PureComponent {
 				);
 			}
 
-			if (startDate && !endDate) {
-				modifiers = this.addModifier(modifiers, startDate, 'selected-start-no-selected-end');
-			}
-
 			if (endDate && !startDate) {
 				modifiers = this.addModifier(modifiers, endDate, 'selected-end-no-selected-start');
 			}
@@ -581,12 +577,16 @@ export default class DayPickerRangeController extends React.PureComponent {
 				'blocked',
 			);
 		}
-
+		
 		const today = moment();
 		if (!isSameDay(this.today, today)) {
 			modifiers = this.deleteModifier(modifiers, this.today, 'today');
 			modifiers = this.addModifier(modifiers, today, 'today');
 			this.today = today;
+		}
+
+		if (startDate && !endDate) {
+			modifiers = this.addModifier(modifiers, startDate, 'selected-start');
 		}
 
 		if (Object.keys(modifiers).length > 0) {
