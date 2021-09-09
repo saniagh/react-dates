@@ -269,6 +269,8 @@ export default class DayPickerRangeController extends React.PureComponent {
 		this.onGetNextScrollableMonths = this.onGetNextScrollableMonths.bind(this);
 		this.onGetPrevScrollableMonths = this.onGetPrevScrollableMonths.bind(this);
 		this.getFirstFocusableDay = this.getFirstFocusableDay.bind(this);
+		this.isDayHalfBooked = this.isDayHalfBooked.bind(this);
+		this.isDayHalfUnavailable = this.isDayHalfUnavailable.bind(this);
 	}
 
 	componentWillReceiveProps(nextProps) {
@@ -577,7 +579,7 @@ export default class DayPickerRangeController extends React.PureComponent {
 				'blocked',
 			);
 		}
-		
+
 		const today = moment();
 		if (!isSameDay(this.today, today)) {
 			modifiers = this.deleteModifier(modifiers, this.today, 'today');
@@ -1332,7 +1334,7 @@ export default class DayPickerRangeController extends React.PureComponent {
 	isDayHalfBooked(day) {
 		const { halfDayBookedDays } = this.props;
 
-		return halfDayBookedDays.some(bookedDay => day.startOf('day').isSame(moment(bookedDay, 'DD.MM.YYYY').startOf('day')));
+		return halfDayBookedDays.some(bookedDay => bookedDay === day.format('YYYY-MM-DD'));
 	}
 
 	isDayHalfUnavailable(day) {
