@@ -352,11 +352,13 @@ export default withStyles(({ reactDates: { color, font } }) => ( {
 		backgroundColor: color.core.frGreen,
 		backgroundImage: `-webkit-linear-gradient(45deg, ${ color.core.frGreen } 50%, ${ color.core.white } 50%)`,
 		color: color.core.black,
+		border: `1px solid #e4e7e7`,
 	},
 	CalendarDay__halfDay_unavailable: {
 		backgroundColor: color.core.frRed,
 		backgroundImage: `-webkit-linear-gradient(45deg, ${ color.core.frRed } 50%, ${ color.core.white } 50%)`,
 		color: color.core.black,
+		border: `1px solid #e4e7e7`,
 	},
 
 	CalendarDay__selected_start: {},

@@ -25,7 +25,7 @@ const core = {
 
 	black: '#000000',
 	frGreen: '#00CA51',
-	frRed: '#E91635',
+	frRed: '#FF4863',
 };
 
 export default {
